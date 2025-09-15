@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 
 
 # LeadRadar API
@@ -54,3 +55,7 @@ LeadRadar is a FastAPI backend for scanning, enriching, and scoring European ind
 
 - Exported files are saved in `exports/`
 - You can customize configuration in `lead_radar_config.py`
+=======
+# Lead-Radar
+LeadRadar is a Python-based FastAPI backend for scanning, enriching, and scoring industrial automation leads. It supports multiple industrial protocols and vendors, provides RESTful endpoints for lead management, and includes adapters for sources like ETG, UR, Siemens, Beckhoff, PROFINET, ODVA, and ROS2. The project is modular.
+>>>>>>> b7b41c026e6a461313fcece51a12d8a393d8d25f
