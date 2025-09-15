@@ -6,7 +6,7 @@
 
 Lead-Radar is a FastAPI backend for scanning, enriching, and scoring European industrial companies, with data export and a web interface.
 
-> Stato/Status: Work in progress (WIP). Il progetto è in evoluzione e potrebbe cambiare frequentemente.  
+> Stato/Status: Work in progress (WIP).   
 > This project is evolving and may change frequently.
 
 ---
