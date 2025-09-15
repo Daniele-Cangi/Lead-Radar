@@ -1,0 +1,53 @@
+# Keyword map → usata da cleaner/normalize.py
+# Ogni tag ha un set di pattern/alias per catturare varianti nei profili LinkedIn
+
+EtherCAT:
+  - "ethercat"
+  - "beckhoff"
+  - "twincat"
+  - "ETC"
+
+PROFINET:
+  - "profinet"
+  - "siemens tia"
+  - "gsdml"
+  - "plc siemens"
+
+EtherNet_IP:
+  - "ethernet/ip"
+  - "ethernet ip"
+  - "allen bradley"
+  - "rockwell"
+  - "studio 5000"
+  - "aoi"
+
+Modbus:
+  - "modbus"
+  - "modbus tcp"
+  - "modbus rtu"
+
+ROS2:
+  - "ros2"
+  - "gazebo"
+  - "rclcpp"
+  - "ros industrial"
+
+UR_Cobot:
+  - "ur"
+  - "universal robots"
+  - "cobot"
+  - "amr"
+  - "mobile robot"
+
+Mechatronics:
+  - "mechatronics"
+  - "controls engineer"
+  - "automation engineer"
+  - "motion control"
+
+Servo/Stepper:
+  - "servo motor"
+  - "stepper"
+  - "servo drive"
+  - "integrated motor"
+  - "servo integrated"
