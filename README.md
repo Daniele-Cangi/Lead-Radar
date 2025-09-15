@@ -33,16 +33,10 @@ Lead-Radar scans industrial sources and vendors (e.g., EtherCAT, Siemens, UR, Be
 - Export to CSV, JSONL, Markdown
 
 ## Architecture
-```mermaid
-flowchart LR
-    A[Industrial Sources<br/>(EtherCAT, Siemens, UR, Beckhoff, ...)] --> B[Scanner]
-    B --> C[Normalizer]
-    C --> D[Enrichment<br/>(Company Data)]
-    D --> E[Scoring]
-    E --> F[Storage]
-    F --> G[Export<br/>CSV · JSONL · Markdown]
-    F --> H[REST API]
-    H --> I[Web UI]
+```
+Industrial Sources -> Scanner -> Normalizer -> Enrichment -> Scoring -> Storage
+Storage -> Export (CSV | JSONL | Markdown)
+Storage -> REST API -> Web UI
 ```
 
 ## Quickstart
