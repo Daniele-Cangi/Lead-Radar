@@ -1,61 +1,129 @@
-<<<<<<< HEAD
+# 📡 Lead-Radar
 
+![Status](https://img.shields.io/badge/status-WIP-orange)
+![Python](https://img.shields.io/badge/python-3.10%2B-blue)
+![FastAPI](https://img.shields.io/badge/FastAPI-API-009688?logo=fastapi)
 
-# LeadRadar API
+Lead-Radar is a FastAPI backend for scanning, enriching, and scoring European industrial companies, with data export and a web interface.
 
-LeadRadar is a FastAPI backend for scanning, enriching, and scoring European industrial companies, with data export and web interface.
+> Stato/Status: Work in progress (WIP). Il progetto è in evoluzione e potrebbe cambiare frequentemente.  
+> This project is evolving and may change frequently.
 
-## Main Features
+---
 
-- Scan industrial sources (EtherCAT, Siemens, UR, Beckhoff, etc.)
-- Automatic enrichment of company data
+## Table of Contents
+- Overview
+- Features
+- Architecture
+- Quickstart
+- API at a glance
+- Exports
+- Configuration
+- Status and Roadmap
+- Contributing
+
+## Overview
+Lead-Radar scans industrial sources and vendors (e.g., EtherCAT, Siemens, UR, Beckhoff), enriches company data, and computes lead scores for prioritization. Data can be exported in multiple formats and consumed via REST API or a web UI.
+
+## Features
+- Multi-source industrial scan (EtherCAT, Siemens, UR, Beckhoff, …)
+- Automatic company data enrichment
 - Lead scoring and classification
+- REST API and basic web interface
 - Export to CSV, JSONL, Markdown
-- REST API and web interface
 
-## Installation
+## Architecture
+```mermaid
+flowchart LR
+    A[Industrial Sources\n(EtherCAT, Siemens, UR, Beckhoff,...)] --> B[Scanner]
+    B --> C[Normalizer]
+    C --> D[Enrichment\n(Company Data)]
+    D --> E[Scoring]
+    E --> F[(Storage)]
+    F --> G[Export\nCSV | JSONL | Markdown]
+    F --> H[REST API]
+    H --> I[Web UI]
+```
 
-1. Clone the repository:
+## Quickstart
 
-   ```sh
-   git clone <repo-url>
-   cd lead_radar
-   ```
+### Prerequisites
+- Python 3.10+
+- pip
 
-2. Install dependencies:
+### Installation
+```sh
+git clone https://github.com/Daniele-Cangi/Lead-Radar.git
+cd Lead-Radar
+pip install -r requirements.txt
+```
 
-   ```sh
-   pip install -r requirements.txt
-   ```
+### Run
+- Using the provided script:
+```sh
+python lead_radar_api.py
+```
 
-3. Start the server:
+- Alternatively with Uvicorn:
+```sh
+uvicorn lead_radar_api:api --reload --host 0.0.0.0 --port 8000
+```
 
-   ```sh
-   python lead_radar_api.py
-   ```
+Once running, the API should be available at:
+- http://localhost:5050
+- Interactive docs (OpenAPI): http://localhost:5050/docs
 
-## Main Dependencies
+## API at a glance
 
-- fastapi
-- uvicorn
-- requests
-- pydantic
-- beautifulsoup4
-- lxml
+Main endpoints:
+- POST /v1/jobs/scan — start a scan job
+- POST /v1/enrich — enrich existing leads
+- POST /v1/score — compute lead scores
+- GET  /v1/leads — list current leads
+- POST /v1/export — export data
 
-## Main API Endpoints
+Example: start a scan
+```sh
+curl -X POST http://localhost:5050/v1/jobs/scan \
+  -H "Content-Type: application/json" \
+  -d '{
+    "sources": ["ethercat", "siemens", "ur", "beckhoff"],
+    "filters": { "region": "EU" }
+  }'
+```
 
-- `/v1/jobs/scan` — Start scan
-- `/v1/enrich` — Enrich leads
-- `/v1/score` — Calculate score
-- `/v1/leads` — List leads
-- `/v1/export` — Export data
+Example: list leads
+```sh
+curl http://localhost:5050/v1/leads
+```
 
-## Notes
+## Exports
+- Formats: CSV, JSONL, Markdown
+- Output directory: exports/
 
-- Exported files are saved in `exports/`
-- You can customize configuration in `lead_radar_config.py`
-=======
-# Lead-Radar
-LeadRadar is a Python-based FastAPI backend for scanning, enriching, and scoring industrial automation leads. It supports multiple industrial protocols and vendors, provides RESTful endpoints for lead management, and includes adapters for sources like ETG, UR, Siemens, Beckhoff, PROFINET, ODVA, and ROS2. The project is modular.
->>>>>>> b7b41c026e6a461313fcece51a12d8a393d8d25f
+Example request:
+```sh
+curl -X POST http://localhost:5050/v1/export \
+  -H "Content-Type: application/json" \
+  -d '{ "format": "csv", "path": "exports/leads.csv" }'
+```
+
+## Configuration
+- Main config file: lead_radar_config.py
+- Customize sources, filters, enrichment and scoring parameters.
+
+## Status and Roadmap
+- WIP: active development
+- Short-term:
+  - [ ] Improve source coverage and scanning heuristics
+  - [ ] Harden enrichment pipelines
+  - [ ] Add pagination and filtering to /v1/leads
+  - [ ] Expand export options and schemas
+  - [ ] Add more examples to docs
+- Mid-term:
+  - [ ] Authentication/Authorization
+  - [ ] CI pipeline and test coverage
+  - [ ] Containerization and deployment guides
+
+## Contributing
+Contributions are welcome! Please open an issue or a pull request. For substantial changes, discuss them first in an issue to align on direction.
