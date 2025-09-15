@@ -35,12 +35,12 @@ Lead-Radar scans industrial sources and vendors (e.g., EtherCAT, Siemens, UR, Be
 ## Architecture
 ```mermaid
 flowchart LR
-    A[Industrial Sources\n(EtherCAT, Siemens, UR, Beckhoff,...)] --> B[Scanner]
+    A[Industrial Sources<br/>(EtherCAT, Siemens, UR, Beckhoff, ...)] --> B[Scanner]
     B --> C[Normalizer]
-    C --> D[Enrichment\n(Company Data)]
+    C --> D[Enrichment<br/>(Company Data)]
     D --> E[Scoring]
-    E --> F[(Storage)]
-    F --> G[Export\nCSV | JSONL | Markdown]
+    E --> F[Storage]
+    F --> G[Export<br/>CSV · JSONL · Markdown]
     F --> H[REST API]
     H --> I[Web UI]
 ```
