@@ -1,123 +1,120 @@
-# 📡 Lead-Radar
+# Lead-Radar
 
-![Status](https://img.shields.io/badge/status-WIP-orange)
+![Status](https://img.shields.io/badge/status-prototype%20baseline-blue)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
 ![FastAPI](https://img.shields.io/badge/FastAPI-API-009688?logo=fastapi)
 
-Lead-Radar is a FastAPI backend for scanning, enriching, and scoring European industrial companies, with data export and a web interface.
+Lead-Radar is an **early local prototype** for discovering, enriching, and scoring European industrial-company leads from public vendor and ecosystem pages.
 
-> Stato/Status: Work in progress (WIP).   
-> This project is evolving and may change frequently.
+> **Project status — paused baseline.** This repository is kept as a documented starting point for a possible future restart. It is not a production service and it is not suitable for unattended or large-scale crawling.
 
----
+## What is in the repository
 
-## Table of Contents
-- Overview
-- Features
-- Architecture
-- Quickstart
-- API at a glance
-- Exports
-- Configuration
-- Status and Roadmap
-- Contributing
+- A FastAPI backend with a small in-memory lead and job store.
+- Source adapters for EtherCAT (ETG), Universal Robots, Siemens, Beckhoff, and PI/PROFINET.
+- Basic enrichment, scoring, and CSV/JSONL/Markdown export.
+- A standalone React dashboard component (`lead_radar_pro_dashboard_react_single_file.jsx`), **not** a bundled or deployed web frontend.
 
-## Overview
-Lead-Radar scans industrial sources and vendors (e.g., EtherCAT, Siemens, UR, Beckhoff), enriches company data, and computes lead scores for prioritization. Data can be exported in multiple formats and consumed via REST API or a web UI.
+The `ODVA_ENIP` and `ROS2` adapters are placeholders: selecting `ALL` includes them, but they currently return no leads.
 
-## Features
-- Multi-source industrial scan (EtherCAT, Siemens, UR, Beckhoff, …)
-- Automatic company data enrichment
-- Lead scoring and classification
-- REST API and basic web interface
-- Export to CSV, JSONL, Markdown
+## Current architecture
 
-## Architecture
-```
-Industrial Sources -> Scanner -> Normalizer -> Enrichment -> Scoring -> Storage
-Storage -> Export (CSV | JSONL | Markdown)
-Storage -> REST API -> Web UI
+```text
+Public vendor pages -> source adapters -> in-memory leads -> enrichment -> scoring -> export
+                                      \-> FastAPI endpoints
 ```
 
-## Quickstart
+There is no database, task queue, authentication, packaged frontend, or deployment configuration. Restarting the process clears all jobs and leads.
+
+## Local quickstart
 
 ### Prerequisites
-- Python 3.10+
-- pip
 
-### Installation
+- Python 3.10+
+- `pip`
+
+### Install and run
+
 ```sh
 git clone https://github.com/Daniele-Cangi/Lead-Radar.git
 cd Lead-Radar
-pip install -r requirements.txt
-```
-
-### Run
-- Using the provided script:
-```sh
+python -m pip install -r requirements.txt
 python lead_radar_api.py
 ```
 
-- Alternatively with Uvicorn (if your app object is exposed):
+The server listens on `http://127.0.0.1:5050` by default. OpenAPI documentation is available at `http://127.0.0.1:5050/docs`.
+
+Equivalent Uvicorn command:
+
 ```sh
-uvicorn lead_radar_api:app --reload --host 0.0.0.0 --port 8000
+uvicorn lead_radar_api:app --reload --host 127.0.0.1 --port 5050
 ```
 
-Once running, the API should be available at:
-- http://localhost:8000
-- Interactive docs (OpenAPI): http://localhost:8000/docs
+## API: a small, honest example
 
-## API at a glance
+Check that the process is running:
 
-Main endpoints:
-- POST /v1/jobs/scan — start a scan job
-- POST /v1/enrich — enrich existing leads
-- POST /v1/score — compute lead scores
-- GET  /v1/leads — list current leads
-- POST /v1/export — export data
-
-Example: start a scan
 ```sh
-curl -X POST http://localhost:8000/v1/jobs/scan \
+curl http://127.0.0.1:5050/health
+```
+
+Run a narrow scan first. `countries` accepts country codes or one of the named regions in `lead_radar_config.py`, such as `EU`, `DACH`, or `EU_EEA_PLUS`.
+
+```sh
+curl -X POST http://127.0.0.1:5050/v1/jobs/scan \
   -H "Content-Type: application/json" \
   -d '{
-    "sources": ["ethercat", "siemens", "ur", "beckhoff"],
-    "filters": { "region": "EU" }
+    "countries": ["IT"],
+    "sources": ["ETG"],
+    "max_per_source": 50,
+    "since_months": 18
   }'
 ```
 
-Example: list leads
+Supported source names are `ETG`, `UR`, `SIEMENS`, `BECKHOFF`, `PI_PROFINET`, `ODVA_ENIP`, `ROS2`, or `ALL`. The scan call is synchronous: it returns only when collection has finished. `max_per_source` is currently applied per source/country adapter call, not globally across a whole scan.
+
+List the in-memory results:
+
 ```sh
-curl http://localhost:8000/v1/leads
+curl "http://127.0.0.1:5050/v1/leads?limit=50"
 ```
 
-## Exports
-- Formats: CSV, JSONL, Markdown
-- Output directory: exports/
+Score them after scanning:
 
-Example request:
 ```sh
-curl -X POST http://localhost:8000/v1/export \
+curl -X POST http://127.0.0.1:5050/v1/score \
   -H "Content-Type: application/json" \
-  -d '{ "format": "csv", "path": "exports/leads.csv" }'
+  -d '{ "job_id": "scan_<returned-id>" }'
 ```
 
-## Configuration
-- Main config file: lead_radar_config.py
-- Customize sources, filters, enrichment and scoring parameters.
+Export uses a list of formats and always writes below `exports/<UTC timestamp>/`:
 
-## Status and Roadmap
-- WIP: active development
-- Short-term:
-  - [ ] Improve source coverage and scanning heuristics
-  - [ ] Harden enrichment pipelines
-  - [ ] Add pagination and filtering to /v1/leads
-  - [ ] Expand export options and schemas
-  - [ ] Add more examples to docs
-- Mid-term:
-  - [ ] Authentication/Authorization
-  - [ ] CI pipeline and test coverage
-  - [ ] Containerization and deployment guides
+```sh
+curl -X POST http://127.0.0.1:5050/v1/export \
+  -H "Content-Type: application/json" \
+  -d '{ "format": ["csv", "jsonl", "md"] }'
+```
 
-## Contributing
-Contributions are welcome! Please open an issue or a pull request. For substantial changes, discuss them first in an issue to align on direction.
+## Known limitations
+
+- The adapters use heuristic HTML selectors and need source-by-source maintenance as third-party sites change.
+- Network, parser, and source failures need better reporting before any operational use.
+- Jobs and leads are process-local and not safe as shared durable state.
+- The dashboard component has dependencies on a separate React/shadcn application; `/ui` in the API is only a placeholder response.
+- `robots.txt` is checked before requests, but that mechanism is not a substitute for confirming each source's terms, rate limits, and permitted use.
+- Enrichment can collect business contact data. Before any real campaign or scale-up, define a lawful basis, retention policy, opt-out process, and a review of the relevant terms and GDPR obligations.
+
+## Sensible restart path
+
+If this project is resumed, start small and make one source reliable end-to-end:
+
+1. Add fixtures and tests for one source adapter; make failures visible in the job result.
+2. Persist leads, source evidence, and job metadata in a database.
+3. Move scans to background workers with explicit limits, retries, and observability.
+4. Validate source permissions and establish the data-governance model before collecting contacts.
+5. Only then add sources, an integrated frontend, authentication, and deployment.
+
+## License
+
+Released under the [MIT License](LICENSE).
+
