@@ -7,6 +7,8 @@ from datetime import datetime, timezone
 import uuid, time, random, json, hashlib, re
 from typing import List, Dict, Optional, Tuple, Any
 from urllib.parse import urljoin, urlparse
+from urllib import robotparser
+from threading import Lock
 import lead_radar_config as config
 import lead_radar_models as models
 
@@ -20,12 +22,14 @@ class RateBucket:
 		self.rps = max(0.1, rps)
 		self.min_gap = 1.0 / self.rps
 		self.last = 0.0
+		self._lock = Lock()
 	def wait(self):
-		now = time.time()
-		delta = now - self.last
-		if delta < self.min_gap:
-			time.sleep(self.min_gap - delta)
-		self.last = time.time()
+		with self._lock:
+			now = time.time()
+			delta = now - self.last
+			if delta < self.min_gap:
+				time.sleep(self.min_gap - delta)
+			self.last = time.time()
 
 class RobustHttp:
 	def __init__(self, timeout=config.DEFAULT_TIMEOUT, rps=config.PER_HOST_RPS, respect_robots=config.RESPECT_ROBOTS):
@@ -34,30 +38,44 @@ class RobustHttp:
 		self.respect_robots = respect_robots
 		self.buckets: Dict[str, RateBucket] = {}
 		self.cache: Dict[str, str] = {}
-		self.robots_cache: Dict[str, str] = {}
+		self.robots_cache: Dict[str, Optional[robotparser.RobotFileParser]] = {}
+		self._bucket_lock = Lock()
 	def _bucket(self, host: str) -> RateBucket:
-		b = self.buckets.get(host)
-		if not b:
-			b = RateBucket(self.rps)
-			self.buckets[host] = b
-		return b
+		with self._bucket_lock:
+			b = self.buckets.get(host)
+			if not b:
+				b = RateBucket(self.rps)
+				self.buckets[host] = b
+			return b
 	def _headers(self) -> Dict[str,str]:
 		return {"User-Agent": random.choice(config.UA_POOL)}
 	def robots_allowed(self, url: str) -> bool:
 		if not self.respect_robots:
 			return True
 		p = urlparse(url)
+		if p.scheme not in {"http", "https"} or not p.netloc:
+			return False
 		base = f"{p.scheme}://{p.netloc}"
 		robots_url = urljoin(base, "/robots.txt")
-		if robots_url in self.robots_cache:
-			txt = self.robots_cache[robots_url]
-		else:
+		if robots_url not in self.robots_cache:
 			try:
-				txt = self.get(robots_url, cache_ok=True)
-				self.robots_cache[robots_url] = txt or ""
+				import requests
+				self._bucket(p.netloc).wait()
+				response = requests.get(robots_url, headers=self._headers(), timeout=self.timeout)
+				if 200 <= response.status_code < 300:
+					parser = robotparser.RobotFileParser()
+					parser.set_url(robots_url)
+					parser.parse((response.text or "").splitlines())
+					self.robots_cache[robots_url] = parser
+				else:
+					self.robots_cache[robots_url] = None
 			except Exception:
+				# Keep the previous best-effort behavior when robots.txt cannot be read,
+				# but do not recurse through get(), which checks robots again.
+				self.robots_cache[robots_url] = None
 				return True
-		return "Disallow: /" not in (txt or "")
+		parser = self.robots_cache[robots_url]
+		return True if parser is None else parser.can_fetch("LeadRadar", url)
 	def get(self, url: str, cache_ok: bool = True) -> str:
 		if cache_ok and url in self.cache:
 			return self.cache[url]
@@ -123,7 +141,8 @@ def upsert_lead_from_raw(rc: models.RawCompany) -> models.Lead:
 			sources=[models.SourceHit(name=rc["source"], strength=src_strength, source_url=rc.get("source_url"))],
 		); LEADS[cid] = lead
 	else:
-		lead.sources.append(models.SourceHit(name=rc["source"], strength=src_strength, source_url=rc.get("source_url")))
+		if not any(s.name == rc["source"] and s.source_url == rc.get("source_url") for s in lead.sources):
+			lead.sources.append(models.SourceHit(name=rc["source"], strength=src_strength, source_url=rc.get("source_url")))
 		if lead.website is None and rc.get("website"): lead.website = rc.get("website")
 		for t in base_stacks:
 			if t not in lead.stack_tags: lead.stack_tags.append(t)
@@ -442,6 +461,8 @@ ADAPTERS: Dict[models.SourceName, Any] = {
 
 # ============================== FastAPI =============================
 api = FastAPI(title="EU Lead Radar API", version="1.3.0")
+# Conventional ASGI name for `uvicorn lead_radar_api:app` compatibility.
+app = api
 
 @api.get("/", include_in_schema=False)
 def root():
