@@ -117,4 +117,3 @@ If this project is resumed, start small and make one source reliable end-to-end:
 ## License
 
 Released under the [MIT License](LICENSE).
-
